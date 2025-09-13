@@ -21,15 +21,8 @@ var (
 	NotificationServer string
 )
 
-type Notification struct {
-	Message     string // The body of the notifcation.
-	Sound       string // A sound located inside the app. Leave empty for the default
-	BadgeNumber *int   // The badge number displayed next to the app. Leave it at nil for no change.
-	Action      string // If empty, this will be slide to view, if "Open", it will be slide to Open
-}
-
 // Sends an unencrypted notification to the client. In general this is more efficient to send a notification, but the intermediete servers may be able to see it.
-func (c *Notification) SendNotification(device_token []byte) error {
+func SendNotification(device_token []byte, notification_data interface{}) error {
 	if NotificationServer == "" {
 		panic("NotificationServer not set before sending notification!")
 	}
@@ -58,11 +51,7 @@ func (c *Notification) SendNotification(device_token []byte) error {
 		ServerAddress string `json:"server_address"`
 		RoutingKey    string `json:"routing_key"`
 
-		// Topic       string `json:"topic"` // Bundle ID
-		Message     string `json:"message"`
-		Sound       string `json:"alert_sound"`
-		Action      string `json:"alert_action"`
-		BadgeNumber *int   `json:"badge_number"`
+		Data interface{} `json:"data"`
 	}
 
 	// json encode notification data
@@ -70,10 +59,7 @@ func (c *Notification) SendNotification(device_token []byte) error {
 		RoutingKey:    hexRoutingKey,
 		ServerAddress: serverAddress,
 
-		Message:     c.Message,
-		Sound:       c.Sound,
-		Action:      c.Action,
-		BadgeNumber: c.BadgeNumber,
+		Data: notification_data,
 	})
 
 	if err != nil {
@@ -98,7 +84,7 @@ func (c *Notification) SendNotification(device_token []byte) error {
 	defer resp.Body.Close()
 
 	if err := json.Unmarshal(bodyBytes, &decodedResp); err != nil {
-		return err
+		return errors.New(string(bodyBytes))
 	}
 
 	if decodedResp.Status != "sucess" {
@@ -109,7 +95,7 @@ func (c *Notification) SendNotification(device_token []byte) error {
 }
 
 // Sends a encrypted notification to the device.
-func (c *Notification) SendEncryptedNotification(device_token []byte) error {
+func SendEncryptedNotification(device_token []byte, notification_data interface{}) error {
 	if NotificationServer == "" {
 		panic("NotificationServer not set before sending notification!")
 	}
@@ -146,21 +132,8 @@ func (c *Notification) SendEncryptedNotification(device_token []byte) error {
 		return fmt.Errorf("failed to derive encryption key: %s", err.Error())
 	}
 
-	type encryptedNotificationData struct {
-		Message     string `json:"message"`
-		Sound       string `json:"alert_sound"`
-		Action      string `json:"alert_action"`
-		BadgeNumber *int   `json:"badge_number"`
-	}
-
 	// json encode notification notificationData
-	notificationData, err := json.Marshal(encryptedNotificationData{
-		Message:     c.Message,
-		Sound:       c.Sound,
-		Action:      c.Action,
-		BadgeNumber: c.BadgeNumber,
-	})
-
+	notificationData, err := json.Marshal(notification_data)
 	if err != nil {
 		return err
 	}
