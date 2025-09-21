@@ -17,18 +17,10 @@ import (
 	"golang.org/x/crypto/hkdf"
 )
 
-var (
-	NotificationServer string
-)
-
-// Sends an unencrypted notification to the client. In general this is more efficient to send a notification, but the intermediete servers may be able to see it.
-func SendNotification(device_token []byte, notification_data interface{}) error {
-	if NotificationServer == "" {
-		panic("NotificationServer not set before sending notification!")
-	}
-
+// / Outputs the routing key, and the server address of the token
+func RoutingInfoFromDeviceToken(device_token []byte) ([]byte, *string, error) {
 	if len(device_token) != 32 {
-		return fmt.Errorf("routing key size incorrect, expected 32 got %d", len(device_token))
+		return nil, nil, fmt.Errorf("routing key size incorrect, expected 32 got %d", len(device_token))
 	}
 	serverAddressByte := device_token[0:16]
 	serverAddressByte = bytes.Trim(serverAddressByte, "\x00")
@@ -38,13 +30,26 @@ func SendNotification(device_token []byte, notification_data interface{}) error 
 	// check if server address fits regex
 	isValidServerAddress, _ := regexp.Match("(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]", []byte(serverAddress))
 	if !isValidServerAddress {
-		return errors.New("routing key address to domain invalid")
+		return nil, nil, errors.New("routing key address to domain invalid")
 	}
 
 	// generate routing key
 	s := sha256.New()
 	s.Write(secretValue)
-	routing_key := s.Sum(nil)
+	return s.Sum(nil), &serverAddress, nil
+
+}
+
+// Sends an unencrypted notification to the client. In general this is more efficient to send a notification, but the intermediete servers may be able to see it.
+func SendNotification(device_token []byte, notification_data interface{}) error {
+	if httpNotificationServer == "" {
+		panic("the session has not been configured before sending a notification, call ConfigureSession() before doing any other action with notifications")
+	}
+
+	routing_key, serverAddress, err := RoutingInfoFromDeviceToken(device_token)
+	if err != nil {
+		return err
+	}
 	hexRoutingKey := hex.EncodeToString(routing_key)
 
 	type noEncryptionNotification struct {
@@ -57,7 +62,7 @@ func SendNotification(device_token []byte, notification_data interface{}) error 
 	// json encode notification data
 	data, err := json.Marshal(noEncryptionNotification{
 		RoutingKey:    hexRoutingKey,
-		ServerAddress: serverAddress,
+		ServerAddress: *serverAddress,
 
 		Data: notification_data,
 	})
@@ -66,7 +71,7 @@ func SendNotification(device_token []byte, notification_data interface{}) error 
 		return err
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/send", NotificationServer), "application/json", bytes.NewBuffer(data))
+	resp, err := http.Post(fmt.Sprintf("%s/send", httpNotificationServer), "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		return err
 	}
@@ -96,8 +101,8 @@ func SendNotification(device_token []byte, notification_data interface{}) error 
 
 // Sends a encrypted notification to the device.
 func SendEncryptedNotification(device_token []byte, notification_data interface{}) error {
-	if NotificationServer == "" {
-		panic("NotificationServer not set before sending notification!")
+	if httpNotificationServer == "" {
+		panic("the session has not been configured before sending a notification, call ConfigureSession() before doing any other action with notifications")
 	}
 
 	if len(device_token) != 32 {
@@ -180,7 +185,7 @@ func SendEncryptedNotification(device_token []byte, notification_data interface{
 		return err
 	}
 
-	resp, err := http.Post(fmt.Sprintf("%s/send", NotificationServer), "application/json", bytes.NewBuffer(data))
+	resp, err := http.Post(fmt.Sprintf("%s/send", httpNotificationServer), "application/json", bytes.NewBuffer(data))
 	if err != nil {
 		return err
 	}
