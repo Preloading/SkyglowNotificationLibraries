@@ -1,4 +1,4 @@
-module github.com/Preloading/SkyglowNotificationLibrary
+module github.com/Preloading/SkyglowNotificationLibrary/golang
 
 go 1.24.2
 
