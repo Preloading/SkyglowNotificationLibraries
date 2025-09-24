@@ -1,6 +1,6 @@
 module github.com/Preloading/SkyglowNotificationLibraries/examples
 
-replace github.com/Preloading/SkyglowNotificationLibraries/golang => ../../golang/
+replace github.com/Preloading/SkyglowNotificationLibraries/golang => ../../golang
 
 go 1.24.2
 
