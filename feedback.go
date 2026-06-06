@@ -53,7 +53,7 @@ func GetFeedback(feedback_key []byte, after time.Time) ([]Feedback, error) {
 		return nil, errors.New(string(bodyBytes))
 	}
 
-	if decodedResp.Status != "sucess" {
+	if decodedResp.Status != "success" {
 		return nil, errors.New(decodedResp.Status)
 	}
 
@@ -138,7 +138,7 @@ func ConfigureTokenForFeedback(device_token []byte, feedback_key []byte) error {
 		return errors.New(string(bodyBytes))
 	}
 
-	if decodedResp.Status != "sucess" {
+	if decodedResp.Status != "success" {
 		return errors.New(decodedResp.Status)
 	}
 

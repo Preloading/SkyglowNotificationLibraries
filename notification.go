@@ -92,7 +92,7 @@ func SendNotification(device_token []byte, notification_data interface{}) error 
 		return errors.New(string(bodyBytes))
 	}
 
-	if decodedResp.Status != "sucess" {
+	if decodedResp.Status != "success" {
 		return errors.New(decodedResp.Status)
 	}
 
@@ -206,7 +206,7 @@ func SendEncryptedNotification(device_token []byte, notification_data interface{
 		return err
 	}
 
-	if decodedResp.Status != "sucess" {
+	if decodedResp.Status != "success" {
 		return errors.New(decodedResp.Status)
 	}
 
